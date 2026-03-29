@@ -9,7 +9,7 @@ import {
   xdr,
 } from "@stellar/stellar-sdk";
 import { Server as SorobanServer } from "@stellar/stellar-sdk/rpc";
-import { getWalletsKit, signTransaction } from "./stellar";
+import { signTransaction } from "./stellar";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
