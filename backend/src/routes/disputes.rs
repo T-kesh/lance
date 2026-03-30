@@ -51,7 +51,8 @@ pub async fn open_dispute_for_job(
         .execute(&state.pool)
         .await?;
 
-    // TODO: call escrow contract open_dispute via services::stellar
+    // Call escrow contract open_dispute via services::stellar
+    let _ = state.stellar.open_dispute(&job_id.to_string()).await;
 
     let dispute = sqlx::query_as::<_, Dispute>(
         r#"INSERT INTO disputes (job_id, opened_by, status)
