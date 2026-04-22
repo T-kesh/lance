@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, contracterror, token, Address, Env, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, token, Address, Env, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
@@ -593,23 +593,23 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &3000i128);
         cc.add_milestone(&1u64, &3000i128);
         cc.add_milestone(&1u64, &3000i128);
-    cc.deposit(&1u64, &9000i128).unwrap();
+        cc.deposit(&1u64, &9000i128).unwrap();
 
         let tc = token::Client::new(&env, &token_addr);
         assert_eq!(tc.balance(&contract_id), 9000);
 
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         assert_eq!(tc.balance(&freelancer), 3000);
 
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         assert_eq!(tc.balance(&freelancer), 6000);
 
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         let job = cc.get_job(&1u64);
         assert_eq!(job.status, EscrowStatus::Completed);
         assert_eq!(tc.balance(&freelancer), 9000);
@@ -632,7 +632,7 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
 
         // 3 distinct milestones with different amounts
@@ -640,13 +640,13 @@ mod test {
         cc.add_milestone(&1u64, &3000i128); // 30%
         cc.add_milestone(&1u64, &5000i128); // 50%
 
-    cc.deposit(&1u64, &10_000i128).unwrap();
+        cc.deposit(&1u64, &10_000i128).unwrap();
 
         let tc = token::Client::new(&env, &token_addr);
         assert_eq!(tc.balance(&contract_id), 10_000);
 
         // Release first milestone
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         assert_eq!(tc.balance(&freelancer), 2000);
 
         // Check milestone status
@@ -655,7 +655,7 @@ mod test {
         assert_eq!(statuses.get(1).unwrap(), MilestoneStatus::Pending);
 
         // Release second milestone
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         assert_eq!(tc.balance(&freelancer), 5000);
 
         // Release third milestone
@@ -677,8 +677,8 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
     }
 
     #[test]
@@ -699,11 +699,11 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &500i128);
         cc.add_milestone(&1u64, &500i128);
-    cc.deposit(&1u64, &1000i128).unwrap();
+        cc.deposit(&1u64, &1000i128).unwrap();
 
     let res = cc.release_milestone(&1u64, &rando);
     assert!(res.is_err());
@@ -725,19 +725,19 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
-    cc.deposit(&1u64, &10_000i128).unwrap();
+        cc.deposit(&1u64, &10_000i128).unwrap();
 
-    cc.release_milestone(&1u64, &client).unwrap();
+        cc.release_milestone(&1u64, &client).unwrap();
         let tc = token::Client::new(&env, &token_addr);
         assert_eq!(tc.balance(&freelancer), 2500);
 
-    cc.open_dispute(&1u64, &freelancer).unwrap();
+        cc.open_dispute(&1u64, &freelancer).unwrap();
         let job = cc.get_job(&1u64);
         assert_eq!(job.status, EscrowStatus::Disputed);
 
@@ -765,11 +765,11 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
-    cc.deposit(&1u64, &5000i128).unwrap();
+        cc.deposit(&1u64, &5000i128).unwrap();
 
         assert_eq!(
             token::Client::new(&env, &token_addr).balance(&client),
@@ -802,7 +802,7 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &500i128);
     let res = cc.deposit(&1u64, &1000i128); // Should Err as 500 != 1000
@@ -828,7 +828,7 @@ mod test {
 
     cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
-    cc.deposit(&1u64, &1000i128).unwrap();
+        cc.deposit(&1u64, &1000i128).unwrap();
     }
 
     #[test]
@@ -864,7 +864,7 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
 
         let total_amount = 10_000i128;
@@ -872,7 +872,7 @@ mod test {
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
         cc.add_milestone(&1u64, &2500i128);
-    cc.deposit(&1u64, &total_amount).unwrap();
+        cc.deposit(&1u64, &total_amount).unwrap();
 
         let tc = token::Client::new(&env, &token_addr);
         assert_eq!(tc.balance(&contract_id), total_amount);
@@ -911,12 +911,12 @@ mod test {
         let contract_id = env.register_contract(None, EscrowContract);
         let cc = EscrowContractClient::new(&env, &contract_id);
 
-    cc.initialize(&admin, &agent_judge).unwrap();
+        cc.initialize(&admin, &agent_judge).unwrap();
         cc.create_job(&1u64, &client, &freelancer, &token_addr);
         cc.add_milestone(&1u64, &3000i128);
         cc.add_milestone(&1u64, &3000i128);
         cc.add_milestone(&1u64, &3000i128);
-    cc.deposit(&1u64, &9000i128).unwrap();
+        cc.deposit(&1u64, &9000i128).unwrap();
 
         cc.raise_dispute(&1u64, &client);
 
