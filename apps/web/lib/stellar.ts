@@ -162,9 +162,9 @@ export async function submitTransaction(
   if (response.status === "ERROR") {
     let isSeqMismatch = false;
     try {
-      if (response.errorResultXdr) {
+      if (response.errorResult) {
         const result = xdr.TransactionResult.fromXDR(
-          response.errorResultXdr,
+          response.errorResult,
           "base64"
         );
         isSeqMismatch = result.result().switch().name === "txBadSeq";
@@ -174,7 +174,7 @@ export async function submitTransaction(
     }
 
     if (process.env.NODE_ENV === "development") {
-      console.error("Transaction Submit Error XDR:", response.errorResultXdr);
+      console.error("Transaction Submit Error XDR:", response.errorResult);
     }
 
     if (isSeqMismatch) {
