@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { SessionSwitcher } from "@/components/auth/session-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { WalletConnect } from "@/components/wallet/wallet-connect";
 import { ConnectWalletButton } from "@/components/wallet/connect-wallet-button";
 
 export function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }) {
@@ -72,6 +73,7 @@ export function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }) {
         <div className="flex items-center gap-4">
           <SessionSwitcher />
           <ThemeToggle />
+          <WalletConnect />
           {isLoggedIn ? (
             <div className="flex items-center gap-2">
               <Button

@@ -21,7 +21,6 @@ export function assertValidStellarAddress(address: string): string {
 
 export function assertValidTransactionXdr(xdr: string): string {
   try {
-    // Parse to ensure shape and network passphrase are valid for this app config.
     new Transaction(xdr, APP_STELLAR_NETWORK);
     return xdr;
   } catch {
@@ -30,6 +29,8 @@ export function assertValidTransactionXdr(xdr: string): string {
 }
 
 export function getWalletsKit(): StellarWalletsKit {
+  if (typeof window === "undefined") return null as unknown as StellarWalletsKit;
+
   if (!kit) {
     kit = new StellarWalletsKit({
       network: APP_STELLAR_NETWORK,
@@ -107,3 +108,5 @@ export async function signTransaction(xdr: string): Promise<string> {
 
   return assertValidTransactionXdr(signedTxXdr);
 }
+
+
