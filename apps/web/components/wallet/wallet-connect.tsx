@@ -19,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { WalletId } from "@creit.tech/stellar-wallets-kit";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -44,14 +43,12 @@ export function WalletConnect() {
   };
 
   const handleConnect = async () => {
-    // We can either open the kit's modal or provide our own selector
-    // For "broad compatibility", kit.openModal() is best
     const kit = (await import("@/lib/stellar")).getWalletsKit();
     kit.openModal({
       onWalletSelected: async (option) => {
         try {
           kit.closeModal();
-          await connect(option.id as WalletId);
+          await connect(option.id as string);
         } catch (err) {
           console.error("Connection error:", err);
         }
