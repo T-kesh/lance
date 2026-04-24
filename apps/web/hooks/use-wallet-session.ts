@@ -6,6 +6,7 @@ import {
   connectWallet,
   disconnectWallet,
   getConnectedWalletAddress,
+  getXlmBalance,
   getWalletNetwork,
   type StellarNetwork,
 } from "@/lib/stellar";
@@ -52,6 +53,7 @@ function persistSession(address: string | null): void {
 export function useWalletSession() {
   const [address, setAddress] = useState<string | null>(null);
   const [walletNetwork, setWalletNetwork] = useState<StellarNetwork | null>(null);
+  const [xlmBalance, setXlmBalance] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +64,10 @@ export function useWalletSession() {
         getConnectedWalletAddress(),
         getWalletNetwork(),
       ]);
+      const balance = connected ? await getXlmBalance(connected) : null;
       setAddress(connected);
       setWalletNetwork(network);
+      setXlmBalance(balance);
       persistSession(connected);
     } catch (refreshError) {
       setError(
@@ -89,9 +93,16 @@ export function useWalletSession() {
         void refreshWalletState();
       }
     };
+    const focusListener = () => {
+      void refreshWalletState();
+    };
 
     document.addEventListener("visibilitychange", visibilityListener);
-    return () => document.removeEventListener("visibilitychange", visibilityListener);
+    window.addEventListener("focus", focusListener);
+    return () => {
+      document.removeEventListener("visibilitychange", visibilityListener);
+      window.removeEventListener("focus", focusListener);
+    };
   }, [refreshWalletState]);
 
   const connect = useCallback(async () => {
@@ -101,8 +112,10 @@ export function useWalletSession() {
     try {
       const connectedAddress = await connectWallet();
       const network = await getWalletNetwork();
+      const balance = await getXlmBalance(connectedAddress);
       setAddress(connectedAddress);
       setWalletNetwork(network);
+      setXlmBalance(balance);
       persistSession(connectedAddress);
       return connectedAddress;
     } catch (connectError) {
@@ -128,6 +141,7 @@ export function useWalletSession() {
 
     setAddress(null);
     setWalletNetwork(null);
+    setXlmBalance(null);
     persistSession(null);
   }, []);
 
@@ -139,6 +153,7 @@ export function useWalletSession() {
   return {
     address,
     walletNetwork,
+    xlmBalance,
     appNetwork: APP_STELLAR_NETWORK,
     isConnected: Boolean(address),
     isLoading,
