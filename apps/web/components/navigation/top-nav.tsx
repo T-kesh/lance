@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NetworkMismatchBanner } from "@/components/ui/network-mismatch-banner";
 import { useAuthStore } from "@/lib/store/use-auth-store";
 import { Button } from "@/components/ui/button";
 import { Search, Bell, Menu, LogOut, BriefcaseBusiness } from "lucide-react";
@@ -12,8 +13,9 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 export function TopNav({ onOpenSidebar }: { onOpenSidebar?: () => void }) {
   const { isLoggedIn, logout, login, role, user } = useAuthStore();
 
-  return (
+ return (
     <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
+      <NetworkMismatchBanner />
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
         <div className="flex items-center gap-4">
           <button
