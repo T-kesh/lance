@@ -1,7 +1,7 @@
 import {
   Horizon,
   Networks,
-  SorobanRpc,
+  rpc as SorobanRpc,
   TransactionBuilder,
   Contract,
   TimeoutInfinite,
