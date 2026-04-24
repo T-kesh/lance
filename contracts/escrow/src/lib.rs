@@ -2,7 +2,8 @@
 
 use soroban_sdk::BytesN;
 use soroban_sdk::{
-    contract, contractclient, contracterror, contractimpl, contracttype, token, Address, Env, Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, log, token, Address, Env,
+    Vec,
 };
 
 #[contracterror]
@@ -31,6 +32,24 @@ pub enum EscrowStatus {
     Disputed,
     Resolved,
     Refunded,
+}
+
+impl EscrowStatus {
+    pub fn validate_transition(&self, next: &EscrowStatus) -> Result<(), EscrowError> {
+        match (self, next) {
+            (EscrowStatus::Setup, EscrowStatus::Funded) => Ok(()),
+            (EscrowStatus::Funded, EscrowStatus::WorkInProgress) => Ok(()),
+            (EscrowStatus::Funded, EscrowStatus::Completed) => Ok(()),
+            (EscrowStatus::Funded, EscrowStatus::Disputed) => Ok(()),
+            (EscrowStatus::Funded, EscrowStatus::Refunded) => Ok(()),
+            (EscrowStatus::WorkInProgress, EscrowStatus::WorkInProgress) => Ok(()),
+            (EscrowStatus::WorkInProgress, EscrowStatus::Completed) => Ok(()),
+            (EscrowStatus::WorkInProgress, EscrowStatus::Disputed) => Ok(()),
+            (EscrowStatus::WorkInProgress, EscrowStatus::Refunded) => Ok(()),
+            (EscrowStatus::Disputed, EscrowStatus::Resolved) => Ok(()),
+            _ => Err(EscrowError::InvalidStateTransition),
+        }
+    }
 }
 
 #[contracttype]
@@ -98,6 +117,7 @@ pub enum EscrowError {
     NoPendingMilestones = 8,
     JobRegistrySyncFailed = 9,
     UpgradeUnauthorized = 10,
+    InvalidStateTransition = 11,
 }
 
 #[contracttype]
@@ -229,6 +249,12 @@ impl EscrowContract {
             .set(&DataKey::AgentJudge, &agent_judge);
 
         // Emit an initialization event for off-chain consumers and logging
+        log!(
+            &env,
+            "Escrow initialized with admin: {} and agent_judge: {}",
+            admin,
+            agent_judge
+        );
         env.events().publish(
             ("escrow", "Initialized"),
             (admin.clone(), agent_judge.clone(), env.ledger().timestamp()),
@@ -258,6 +284,7 @@ impl EscrowContract {
             .set(&DataKey::AgentJudge, &new_agent_judge);
 
         // Emit an event for off-chain logging and debugging
+        log!(&env, "Agent Judge updated to: {}", new_agent_judge);
         env.events().publish(
             ("escrow", "AgentJudgeUpdated"),
             (
@@ -285,6 +312,7 @@ impl EscrowContract {
             .instance()
             .set(&DataKey::JobRegistry, &job_registry);
 
+        log!(&env, "JobRegistry configured to: {}", job_registry);
         env.events().publish(
             ("escrow", "JobRegistryConfigured"),
             JobRegistryConfiguredEvent {
@@ -320,6 +348,7 @@ impl EscrowContract {
 
         env.deployer()
             .update_current_contract_wasm(new_wasm_hash.clone());
+        log!(&env, "Contract upgraded by admin");
         env.events().publish(
             ("escrow", "ContractUpgraded"),
             ContractUpgradedEvent {
@@ -349,8 +378,8 @@ impl EscrowContract {
         let expires_at = now + 30 * 24 * 60 * 60;
 
         let job = EscrowJob {
-            client,
-            freelancer,
+            client: client.clone(),
+            freelancer: freelancer.clone(),
             token: token_addr,
             total_amount: 0,
             released_amount: 0,
@@ -359,6 +388,13 @@ impl EscrowContract {
             expires_at,
             milestones: Vec::new(&env),
         };
+        log!(
+            &env,
+            "create_job: id {} client {} freelancer {}",
+            job_id,
+            client,
+            freelancer
+        );
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
     }
@@ -376,6 +412,7 @@ impl EscrowContract {
             amount,
             status: MilestoneStatus::Pending,
         });
+        log!(&env, "add_milestone: job {} amount {}", job_id, amount);
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
     }
@@ -419,8 +456,11 @@ impl EscrowContract {
         let token_client = token::Client::new(&env, &job.token);
         token_client.transfer(&job.client, &env.current_contract_address(), &amount);
 
+        let next_status = EscrowStatus::Funded;
+        job.status.validate_transition(&next_status)?;
         job.total_amount = amount;
-        job.status = EscrowStatus::Funded;
+        job.status = next_status;
+        log!(&env, "deposit: job {} amount {}", job_id, amount);
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
 
@@ -483,10 +523,20 @@ impl EscrowContract {
             &milestone.amount,
         );
 
-        if job.released_amount == job.total_amount {
-            job.status = EscrowStatus::Completed;
-        }
+        let next_status = if job.released_amount == job.total_amount {
+            EscrowStatus::Completed
+        } else {
+            EscrowStatus::WorkInProgress
+        };
+        job.status.validate_transition(&next_status)?;
+        job.status = next_status;
 
+        log!(
+            &env,
+            "release_milestone: job {} amount {}",
+            job_id,
+            milestone.amount
+        );
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
 
@@ -540,10 +590,22 @@ impl EscrowContract {
             &milestone.amount,
         );
 
-        if job.released_amount == job.total_amount {
-            job.status = EscrowStatus::Completed;
-        }
+        let next_status = if job.released_amount == job.total_amount {
+            EscrowStatus::Completed
+        } else {
+            EscrowStatus::WorkInProgress
+        };
+        job.status
+            .validate_transition(&next_status)
+            .expect("invalid state transition");
+        job.status = next_status;
 
+        log!(
+            &env,
+            "release_funds: job {} amount {}",
+            job_id,
+            milestone.amount
+        );
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
     }
@@ -568,7 +630,10 @@ impl EscrowContract {
             return Err(EscrowError::Unauthorized);
         }
 
-        job.status = EscrowStatus::Disputed;
+        let next_status = EscrowStatus::Disputed;
+        job.status.validate_transition(&next_status)?;
+        job.status = next_status;
+        log!(&env, "open_dispute: job {}", job_id);
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
 
@@ -619,7 +684,10 @@ impl EscrowContract {
         );
 
         // 6. Lock funds by transitioning to Disputed — blocks release_funds & release_milestone
-        job.status = EscrowStatus::Disputed;
+        let next_status = EscrowStatus::Disputed;
+        job.status.validate_transition(&next_status)?;
+        job.status = next_status;
+        log!(&env, "raise_dispute: job {}", job_id);
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
 
@@ -683,8 +751,19 @@ impl EscrowContract {
             token_client.transfer(&env.current_contract_address(), &job.client, &payer_amount);
         }
 
+        let next_status = EscrowStatus::Resolved;
+        job.status
+            .validate_transition(&next_status)
+            .expect("invalid state transition");
         job.released_amount += total_payout;
-        job.status = EscrowStatus::Resolved;
+        job.status = next_status;
+        log!(
+            &env,
+            "resolve_dispute: job {} payee {} payer {}",
+            job_id,
+            payee_amount,
+            payer_amount
+        );
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
     }
@@ -715,8 +794,11 @@ impl EscrowContract {
             token_client.transfer(&env.current_contract_address(), &job.client, &remaining);
         }
 
+        let next_status = EscrowStatus::Refunded;
+        job.status.validate_transition(&next_status)?;
         job.released_amount = job.total_amount;
-        job.status = EscrowStatus::Refunded;
+        job.status = next_status;
+        log!(&env, "refund: job {} amount {}", job_id, remaining);
         env.storage().persistent().set(&key, &job);
         Self::bump_job_ttl(&env, &key);
 
