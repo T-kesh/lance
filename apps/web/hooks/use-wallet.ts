@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { useWalletStore } from "@/lib/store/use-wallet-store";
 import { getWalletsKit, registerWalletListeners } from "@/lib/stellar";
-import { WalletId, Networks } from "@creit.tech/stellar-wallets-kit";
+import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { toast } from "sonner";
 
 export function useWallet() {
@@ -21,7 +21,7 @@ export function useWallet() {
 
   const isInitialized = useRef(false);
 
-  const connect = useCallback(async (id: WalletId) => {
+  const connect = useCallback(async (id: string) => {
     setStatus("connecting");
     const kit = getWalletsKit();
     
@@ -58,7 +58,7 @@ export function useWallet() {
       if (address && walletId) {
         try {
           const kit = getWalletsKit();
-          kit.setWallet(walletId as WalletId);
+          kit.setWallet(walletId as string);
           const { address: currentAddress } = await kit.getAddress();
           
           if (currentAddress === address) {
