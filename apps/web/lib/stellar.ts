@@ -1,4 +1,4 @@
-import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
+import { StellarWalletsKit, Networks, ISupportedWallet } from "@creit.tech/stellar-wallets-kit";
 import { Horizon, StrKey, Transaction } from "@stellar/stellar-sdk";
 import { categorizeWalletError } from "./wallet-errors";
 
@@ -9,6 +9,41 @@ export { Networks };
 
 export const APP_STELLAR_NETWORK: StellarNetwork =
   (process.env.NEXT_PUBLIC_STELLAR_NETWORK as StellarNetwork) ?? Networks.TESTNET;
+
+export interface ConnectedWallet {
+  address: string;
+  walletId: string;
+  walletName: string;
+  walletIcon: string;
+}
+
+export interface WalletMeta {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+// --- Wallet ID persistence ---
+
+function readStoredWalletId(): string | null {
+  try {
+    return localStorage.getItem("selectedWalletId");
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredWalletId(id: string): void {
+  try {
+    localStorage.setItem("selectedWalletId", id);
+  } catch {}
+}
+
+export function getSelectedWalletId(): string | null {
+  return readStoredWalletId();
+}
+
+// --- Validation helpers ---
 
 export function isValidStellarAddress(address: string): boolean {
   return StrKey.isValidEd25519PublicKey(address);
@@ -30,29 +65,28 @@ export function assertValidTransactionXdr(xdr: string): string {
   }
 }
 
+// --- Kit ---
+
 export function getWalletsKit(): StellarWalletsKit {
   if (typeof window === "undefined") return null as unknown as StellarWalletsKit;
 
   if (!kit) {
-    const storedWalletId = readStoredWalletId();
     kit = new StellarWalletsKit({
       network: APP_STELLAR_NETWORK,
-      selectedWalletId: "freighter",
+      selectedWalletId: readStoredWalletId() ?? "freighter",
       modules: ["freighter", "albedo", "xbull"],
     });
   }
   return kit;
 }
 
+// --- Wallet connection ---
+
 export async function connectWallet(): Promise<string> {
   const wallet = await connectWalletWithInfo();
   return wallet.address;
 }
 
-/**
- * Same as connectWallet, but also returns the metadata of the selected
- * provider (id, display name, icon URL) so the UI can render it.
- */
 export async function connectWalletWithInfo(): Promise<ConnectedWallet> {
   if (process.env.NEXT_PUBLIC_E2E === "true") {
     return {
@@ -71,7 +105,12 @@ export async function connectWalletWithInfo(): Promise<ConnectedWallet> {
           writeStoredWalletId(option.id);
           walletsKit.closeModal();
           const { address } = await walletsKit.getAddress();
-          resolve(assertValidStellarAddress(address));
+          resolve({
+            address: assertValidStellarAddress(address),
+            walletId: option.id,
+            walletName: option.name,
+            walletIcon: option.icon ?? "",
+          });
         } catch (err) {
           const walletError = categorizeWalletError(err);
           reject(new Error(walletError.userFriendlyMessage));
@@ -80,6 +119,18 @@ export async function connectWalletWithInfo(): Promise<ConnectedWallet> {
       onClosed: () => reject(new Error("Wallet connection cancelled by user.")),
     });
   });
+}
+
+export async function getWalletInfo(walletId: string): Promise<WalletMeta | null> {
+  try {
+    const walletsKit = getWalletsKit();
+    const supportedWallets = await walletsKit.getSupportedWallets();
+    const match = supportedWallets.find((w) => w.id === walletId);
+    if (!match) return null;
+    return { id: match.id, name: match.name, icon: match.icon ?? "" };
+  } catch {
+    return null;
+  }
 }
 
 export async function disconnectWallet(): Promise<void> {
