@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -48,7 +48,6 @@ import {
 } from "@/lib/format";
 import { getReputationView } from "@/lib/reputation";
 import { connectWallet, getConnectedWalletAddress } from "@/lib/stellar";
-import { ExplorerLink } from "@/components/ui/explorer-link";
 
 const TABS: Array<{ id: ProfileTabId; label: string }> = [
   { id: "overview", label: "Overview" },
@@ -77,7 +76,6 @@ function PublicProfileWorkspace({ address }: { address: string }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ProfileTabId>("overview");
   const [editing, setEditing] = useState(false);
-  const [formValues, setFormValues] = useState<ProfileFormValues>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<ProfileFormErrors>({});
 
   const viewerQuery = useQuery({
@@ -100,12 +98,9 @@ function PublicProfileWorkspace({ address }: { address: string }) {
     staleTime: 300_000,
   });
 
-  useEffect(() => {
-    if (profileQuery.data) {
-      setFormValues(createProfileFormValues(profileQuery.data));
-      setFormErrors({});
-    }
-  }, [profileQuery.data]);
+  const [formValues, setFormValues] = useState<ProfileFormValues>(() =>
+    profileQuery.data ? createProfileFormValues(profileQuery.data) : EMPTY_FORM
+  );
 
   const connectWalletMutation = useMutation({
     mutationFn: connectWallet,
@@ -262,7 +257,6 @@ function PublicProfileWorkspace({ address }: { address: string }) {
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 <div className="grid gap-4 md:grid-cols-3">
                   <StatGlassCard
                     label="Freelancer score"
@@ -288,34 +282,6 @@ function PublicProfileWorkspace({ address }: { address: string }) {
                     caption="Monitored across client and freelancer history"
                     accent="sky"
                   />
-=======
-              <div className="rounded-[1.6rem] border border-slate-200 bg-slate-50 p-5 text-right">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Wallet address
-                </p>
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-sm font-medium text-slate-800">
-                    {shortenAddress(profile.address, 12, 6)}
-                  </p>
-                  <ExplorerLink address={profile.address} className="text-indigo-600 hover:text-indigo-500" />
-                </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  Updated {formatDate(profile.updated_at)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Freelancer score
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <Stars value={freelancerRep?.starRating ?? 2.5} />
-                  <span className="text-sm font-semibold text-slate-900">
-                    {freelancerRep?.averageStars.toFixed(1) ?? "2.5"}
-                  </span>
->>>>>>> origin/main
                 </div>
 
                 <nav
@@ -359,7 +325,7 @@ function PublicProfileWorkspace({ address }: { address: string }) {
                       />
                     ) : (
                       profile.portfolio_links.map((link) => (
-                        <a
+                        
                           key={link}
                           href={link}
                           target="_blank"
